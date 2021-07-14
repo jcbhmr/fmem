@@ -6,6 +6,8 @@ cmake_minimum_required (VERSION 2.8)
 
 project (fmem C)
 
+OPTION(BUILD_TESTING "Build the tests with ON, defaults to OFF" OFF)
+
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/.cmake")
 
 include (CheckSymbolExists)
@@ -74,8 +76,8 @@ else ()
   message (FATAL_ERROR "No memory stream implementation found")
 endif ()
 
-include_directories (include src ${PROJECT_BINARY_DIR}/gen)
 add_library (fmem ${SOURCES})
+target_include_directories (fmem PUBLIC ${PROJECT_BINARY_DIR}/gen)
 
 get_property (FMEM_LIBTYPE
   TARGET fmem
