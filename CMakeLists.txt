@@ -2,7 +2,7 @@
 # Redistribution and use of this file is allowed according to the terms of the MIT license.
 # For details see the LICENSE file distributed with Mimick.
 
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 2.8.12)
 
 option(BUILD_SHARED_LIBS "Build shared library." OFF)
 option(BUILD_TESTING "Build tests." OFF)
@@ -18,6 +18,16 @@ project (fmem C)
 OPTION(BUILD_TESTING "Build the tests with ON, defaults to OFF" OFF)
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/.cmake")
+
+if(MSVC AND NOT BUILD_SHARED_LIBS)
+  add_compile_options(/EHsc)
+  # See https://gitlab.kitware.com/cmake/cmake/-/issues/18390
+  add_compile_options(
+          $<$<CONFIG:>:/MT>
+          $<$<CONFIG:Debug>:/MTd>
+          $<$<CONFIG:Release>:/MT>
+  )
+endif(MSVC AND NOT BUILD_SHARED_LIBS)
 
 include (CheckSymbolExists)
 include (CheckCSourceCompiles)
