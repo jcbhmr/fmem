@@ -1,6 +1,7 @@
 # fmem
 
-[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FKreijstal%2Ffmem%2Fbadge%3Fref%3Dmaster&style=plastic)](https://actions-badge.atrox.dev/Kreijstal/fmem/goto?ref=master)
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/kreijstal/fmem/cmake-multi-platform.yml?style=plastic&labelColor=blue)
+
 
 Forked from Snaipe, since he hasn't reviewed pull request in the last 6 years.
 
