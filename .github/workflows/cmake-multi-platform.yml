@@ -11,13 +11,15 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    env:
+      BUILD_OUTPUT_DIR: ${{ github.workspace }}/build 
 
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
       fail-fast: false
 
       # Set up a matrix to run the following 3 configurations:
-      # 1. <Windows, Release, latest MSVC compiler toolchain on the default runner image, default generator>
+      # 1. <Windows, Release, latest MinGW compiler toolchain on the default runner image, MSYS Generator>
       # 2. <Linux, Release, latest GCC compiler toolchain on the default runner image, default generator>
       # 3. <Linux, Release, latest Clang compiler toolchain on the default runner image, default generator>
       #
@@ -25,11 +27,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         build_type: [Release]
-        c_compiler: [gcc, clang, cl]
+        c_compiler: [gcc, clang]
         include:
           - os: windows-latest
-            c_compiler: cl
-            cpp_compiler: cl
+            c_compiler: gcc
+            cpp_compiler: g++
           - os: ubuntu-latest
             c_compiler: gcc
             cpp_compiler: g++
@@ -38,38 +40,74 @@ jobs:
             cpp_compiler: clang++
         exclude:
           - os: windows-latest
-            c_compiler: gcc
-          - os: windows-latest
             c_compiler: clang
-          - os: ubuntu-latest
-            c_compiler: cl
+
 
     steps:
     - uses: actions/checkout@v3
-
-    - name: Set reusable strings
-      # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
-      id: strings
-      shell: bash
+    # Add Meson installation steps here
+    - name: Install Meson (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
       run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        sudo apt-get update
+        sudo apt-get install -y meson
 
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+    - name: Install MinGW and Meson (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        install: mingw-w64-x86_64-meson mingw-w64-x86_64-libgit2 mingw-w64-x86_64-gcc mingw-w64-x86_64-ninja base-devel git mingw-w64-x86_64-cmake
+        upgrade: true
+
+
+    - name: Configure CMake (Windows)
+    # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      if: matrix.os == 'windows-latest'
+      run: |
+        cmake -B $BUILD_OUTPUT_DIR -G"MSYS Makefiles" -S $BUILD_OUTPUT_DIR/..
+      shell: msys2 {0}
+
+    - name: Configure CMake (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
       run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        cmake -B $BUILD_OUTPUT_DIR
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -S ${{ github.workspace }}
 
-    - name: Build
-      # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
 
-    - name: Test
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest --build-config ${{ matrix.build_type }}
+
+    - name: Build (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: msys2 {0}
+      # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
+      run: cmake --build $BUILD_OUTPUT_DIR --config ${{ matrix.build_type }}
+
+    - name: Build (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: cmake --build $BUILD_OUTPUT_DIR --config ${{ matrix.build_type }}
+
+    - name: Test (Ubuntu)
+      working-directory: ${{ env.BUILD_OUTPUT_DIR }}
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        ctest --build-config ${{ matrix.build_type }}  --output-on-failure
+        if [ $? -ne 0 ]; then
+          cat Testing/Temporary/LastTest.log
+          exit 1
+        fi
+
+    - name: Test (Windows)
+      working-directory: ${{ env.BUILD_OUTPUT_DIR }}
+      if: matrix.os == 'windows-latest'
+      shell: msys2 {0}
+      run: |
+        export PATH="$BUILD_OUTPUT_DIR/Criterion/src:$BUILD_OUTPUT_DIR/Criterion/subprojects/nanomsg:$BUILD_OUTPUT_DIR/Criterion/subprojects/nanopb:$BUILD_OUTPUT_DIR/Criterion/subprojects/boxfort/src:$BUILD_OUTPUT_DIR/Criterion/subprojects/libgit2:$PATH"  
+        ctest --build-config ${{ matrix.build_type }}  --output-on-failure
+        if [ $? -ne 0 ]; then
+          cat Testing/Temporary/LastTest.log
+          exit 1
+        fi
