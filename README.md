@@ -1,7 +1,8 @@
 # fmem
 
-[![Unix Build Status](https://img.shields.io/travis/Snaipe/fmem/master.svg?label=linux)](https://travis-ci.org/Snaipe/fmem) 
-[![Windows Build Status](https://img.shields.io/appveyor/ci/Snaipe/fmem/master.svg?label=windows)](https://ci.appveyor.com/project/Snaipe/fmem/branch/master)
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FKreijstal%2Ffmem%2Fbadge%3Fref%3Dmaster&style=plastic)](https://actions-badge.atrox.dev/Kreijstal/fmem/goto?ref=master)
+
+Forked from Snaipe, since he hasn't reviewed pull request in the last 6 years.
 
 A cross-platform library for opening memory-backed libc streams.
 
